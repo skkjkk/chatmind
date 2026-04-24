@@ -1,6 +1,5 @@
 """Reply engine using DeepSeek API"""
 import json
-import asyncio
 from typing import Optional
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
@@ -18,15 +17,16 @@ class ReplyEngine:
             self.llm = ChatOpenAI(
                 model="deepseek-chat",
                 temperature=0.7,
+                max_tokens=500,
                 openai_api_key=settings.deepseek_api_key,
                 openai_api_base="https://api.deepseek.com/v1"
             )
 
-    def _call_llm(self, prompt: str) -> str:
-        """Synchronous LLM call"""
+    async def _call_llm(self, prompt: str) -> str:
         if not self.llm:
             return ""
-        return self.llm([HumanMessage(content=prompt)]).content
+        result = await self.llm.ainvoke([HumanMessage(content=prompt)])
+        return result.content
 
     def _parse_json_response(self, content: str) -> Optional[dict]:
         """Parse JSON from LLM response"""
@@ -80,8 +80,7 @@ class ReplyEngine:
             return self._fallback_response(draft, context, style)
 
         try:
-            loop = asyncio.get_event_loop()
-            content = await loop.run_in_executor(None, self._call_llm, prompt)
+            content = await self._call_llm(prompt)
             result = self._parse_json_response(content)
             if result:
                 return result
@@ -121,8 +120,7 @@ class ReplyEngine:
             return self._fallback_quick(scenario, style)
 
         try:
-            loop = asyncio.get_event_loop()
-            content = await loop.run_in_executor(None, self._call_llm, prompt)
+            content = await self._call_llm(prompt)
             result = self._parse_json_response(content)
             if result:
                 return result
@@ -158,8 +156,7 @@ class ReplyEngine:
             return {"original": draft, "improved": draft, "suggestions": []}
 
         try:
-            loop = asyncio.get_event_loop()
-            content = await loop.run_in_executor(None, self._call_llm, prompt)
+            content = await self._call_llm(prompt)
             result = self._parse_json_response(content)
             if result:
                 return result

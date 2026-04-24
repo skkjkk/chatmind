@@ -46,16 +46,15 @@ app.include_router(analysis.router)
 app.include_router(reply.router)
 
 
-# Serve built frontend (production)
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy"}
+
+
+# Serve built frontend (production) - must be last
 static_dir = Path(__file__).parent.parent.parent / "frontend" / "dist"
 if static_dir.exists():
     app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="frontend")
-
-
-@app.get("/api/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
 
 
 if __name__ == "__main__":
