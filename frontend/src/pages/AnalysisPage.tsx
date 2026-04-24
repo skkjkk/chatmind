@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Loader2, BarChart3, Users, Heart, Sparkles, Clock, MessageSquare, Hash, Smile } from 'lucide-react'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../lib/api'
 import type { StatsResponse, PersonalityResponse, RelationResponse } from '../types'
 import { Button } from '../components/ui/Button'
@@ -64,12 +64,6 @@ export function AnalysisPage() {
       name: name === 'text' ? '文字' : name === 'image' ? '图片' : name === 'voice' ? '语音' : name === 'emoji' ? '表情' : name,
       value,
     }))
-  }
-
-  const getScoreLabel = (score: number) => {
-    if (score >= 70) return '高'
-    if (score >= 40) return '中'
-    return '低'
   }
 
   if (loading) {
