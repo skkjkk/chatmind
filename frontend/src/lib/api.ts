@@ -146,12 +146,12 @@ class ApiClient {
     })
   }
 
-  streamSmartReply(draft: string, context: string, style: string, onAnalysis: (text: string) => void, onDone: (suggestions: any[], improvedReply: string) => void) {
+  streamSmartReply(draft: string, context: string, style: string, onAnalysis: (text: string) => void, onDone: (suggestions: any[], improvedReply: string) => void, recordId?: string) {
     const token = localStorage.getItem('token')
     fetch('/api/reply/suggest/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ draft, context, style }),
+      body: JSON.stringify({ draft, context, style, record_id: recordId || null }),
     }).then(async (res) => {
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()

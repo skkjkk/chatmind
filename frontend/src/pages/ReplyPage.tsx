@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { MessageCircle, Loader2, Sparkles, Lightbulb, Wand2 } from 'lucide-react'
 import { api } from '../lib/api'
@@ -19,6 +19,14 @@ export function ReplyPage() {
   const [mode, setMode] = useState<Mode>('smart')
   const [loading, setLoading] = useState(false)
   const [style, setStyle] = useState('concise')
+
+  // Records for smart context
+  const [records, setRecords] = useState<{id: string, contact_name: string}[]>([])
+  const [selectedRecordId, setSelectedRecordId] = useState('')
+
+  useEffect(() => {
+    api.getRecords().then(data => setRecords(data.records || []))
+  }, [])
 
   // Smart context mode
   const [draft, setDraft] = useState('')
@@ -45,7 +53,8 @@ export function ReplyPage() {
       (suggestions, improvedReply) => {
         setSmartResult({ suggestions, improved_reply: improvedReply })
         setLoading(false)
-      }
+      },
+      selectedRecordId || undefined
     )
   }
 
@@ -141,14 +150,29 @@ export function ReplyPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">当前对话背景</label>
-                <textarea
-                  className="w-full h-24 p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="对方说了什么？"
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                />
+                <label className="text-sm font-medium">选择聊天记录（自动提取语境）</label>
+                <select
+                  className="w-full p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  value={selectedRecordId}
+                  onChange={(e) => setSelectedRecordId(e.target.value)}
+                >
+                  <option value="">-- 不选择，手动输入背景 --</option>
+                  {records.map(r => (
+                    <option key={r.id} value={r.id}>{r.contact_name}</option>
+                  ))}
+                </select>
               </div>
+              {!selectedRecordId && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">手动输入对话背景</label>
+                  <textarea
+                    className="w-full h-24 p-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="对方说了什么？"
+                    value={context}
+                    onChange={(e) => setContext(e.target.value)}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-sm font-medium">您的回复草稿</label>
                 <textarea
@@ -158,7 +182,7 @@ export function ReplyPage() {
                   onChange={(e) => setDraft(e.target.value)}
                 />
               </div>
-              <Button onClick={handleSmartSubmit} disabled={loading || !context || !draft} className="w-full">
+              <Button onClick={handleSmartSubmit} disabled={loading || !draft || (!selectedRecordId && !context)} className="w-full">
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                 获取建议
               </Button>

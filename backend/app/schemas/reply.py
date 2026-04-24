@@ -8,8 +8,9 @@ import json
 class SmartContextRequest(BaseModel):
     """智能语境模式请求"""
     draft: str = Field(..., description="你想回复的话（草稿）")
-    context: str = Field(..., description="当前对话背景（对方说了什么）")
+    context: str = Field("", description="当前对话背景（对方说了什么）")
     style: str = "concise"
+    record_id: Optional[str] = Field(None, description="聊天记录ID，自动提取语境")
 
 
 class QuickQuestionRequest(BaseModel):

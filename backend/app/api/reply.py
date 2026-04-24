@@ -1,8 +1,13 @@
 """Reply suggestion API routes"""
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
+from app.database import get_db
 from app.models.user import User
+from app.models.message import Message
+from app.models.chat_record import ChatRecord
 from app.schemas.reply import (
     SmartContextRequest,
     SmartContextResponse,
@@ -19,13 +24,36 @@ router = APIRouter(prefix="/api/reply", tags=["Reply"])
 reply_engine = ReplyEngine()
 
 
+async def _build_context_from_record(record_id: str, user_id: str, db: AsyncSession) -> str:
+    """取最近20条消息拼成对话背景"""
+    record = (await db.execute(
+        select(ChatRecord).where(ChatRecord.id == record_id, ChatRecord.user_id == user_id)
+    )).scalar_one_or_none()
+    if not record:
+        return ""
+    msgs = (await db.execute(
+        select(Message).where(Message.record_id == record_id)
+        .order_by(Message.timestamp.desc()).limit(20)
+    )).scalars().all()
+    msgs = list(reversed(msgs))
+    lines = []
+    for m in msgs:
+        speaker = "我" if m.is_from_me else record.contact_name
+        lines.append(f"{speaker}：{m.content or '[图片/表情]'}")
+    return "\n".join(lines)
+
+
 @router.post("/suggest/stream")
 async def stream_smart_suggestion(
     request: SmartContextRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
+    context = request.context
+    if request.record_id:
+        context = await _build_context_from_record(request.record_id, current_user.id, db)
     return StreamingResponse(
-        reply_engine.stream_smart_reply(request.draft, request.context, request.style),
+        reply_engine.stream_smart_reply(request.draft, context, request.style),
         media_type="text/event-stream"
     )
 
