@@ -96,6 +96,16 @@ export interface PersonalityResponse {
   their_positive_score: number
   my_direct_score: number
   their_direct_score: number
+  my_openness?: number
+  their_openness?: number
+  my_conscientiousness?: number
+  their_conscientiousness?: number
+  my_extraversion?: number
+  their_extraversion?: number
+  my_agreeableness?: number
+  their_agreeableness?: number
+  my_neuroticism?: number
+  their_neuroticism?: number
   my_interaction_style: string
   their_interaction_style: string
   summary: string

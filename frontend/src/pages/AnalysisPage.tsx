@@ -210,18 +210,22 @@ export function AnalysisPage() {
                 )}
                 <div className="space-y-3">
                   {[
-                    { label: "外向程度", value: personality.my_extroversion_score, color: "bg-indigo-500" },
-                    { label: "理性程度", value: personality.my_rational_score, color: "bg-purple-500" },
-                    { label: "积极程度", value: personality.my_positive_score, color: "bg-pink-500" },
-                    { label: "直接程度", value: personality.my_direct_score, color: "bg-amber-500" },
+                    { label: "O 开放性", desc: "思维开放·好奇探索", value: personality.my_openness ?? personality.my_extroversion_score, color: "bg-violet-500" },
+                    { label: "C 尽责性", desc: "自律认真·有条理", value: personality.my_conscientiousness ?? personality.my_rational_score, color: "bg-blue-500" },
+                    { label: "E 外向性", desc: "主动活跃·社交能量", value: personality.my_extraversion ?? personality.my_extroversion_score, color: "bg-indigo-500" },
+                    { label: "A 宜人性", desc: "友善温和·乐于合作", value: personality.my_agreeableness ?? personality.my_positive_score, color: "bg-emerald-500" },
+                    { label: "N 神经质", desc: "情绪敏感·易受影响", value: personality.my_neuroticism ?? (100 - personality.my_direct_score), color: "bg-rose-500" },
                   ].map(t => (
                     <div key={t.label}>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600">{t.label}</span>
+                        <div>
+                          <span className="text-sm font-medium">{t.label}</span>
+                          <span className="text-xs text-slate-400 ml-2">{t.desc}</span>
+                        </div>
                         <span className="text-sm font-medium">{t.value.toFixed(0)}</span>
                       </div>
-                      <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div className={`h-full ${t.color} rounded-full`} style={{ width: `${t.value}%` }} />
+                      <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-1">
+                        <div className={`h-full ${t.color} rounded-full transition-all`} style={{ width: `${t.value}%` }} />
                       </div>
                     </div>
                   ))}
@@ -244,18 +248,22 @@ export function AnalysisPage() {
                 )}
                 <div className="space-y-3">
                   {[
-                    { label: "外向程度", value: personality.their_extroversion_score, color: "bg-indigo-500" },
-                    { label: "理性程度", value: personality.their_rational_score, color: "bg-purple-500" },
-                    { label: "积极程度", value: personality.their_positive_score, color: "bg-pink-500" },
-                    { label: "直接程度", value: personality.their_direct_score, color: "bg-amber-500" },
+                    { label: "O 开放性", desc: "思维开放·好奇探索", value: personality.their_openness ?? personality.their_extroversion_score, color: "bg-violet-500" },
+                    { label: "C 尽责性", desc: "自律认真·有条理", value: personality.their_conscientiousness ?? personality.their_rational_score, color: "bg-blue-500" },
+                    { label: "E 外向性", desc: "主动活跃·社交能量", value: personality.their_extraversion ?? personality.their_extroversion_score, color: "bg-indigo-500" },
+                    { label: "A 宜人性", desc: "友善温和·乐于合作", value: personality.their_agreeableness ?? personality.their_positive_score, color: "bg-emerald-500" },
+                    { label: "N 神经质", desc: "情绪敏感·易受影响", value: personality.their_neuroticism ?? (100 - personality.their_direct_score), color: "bg-rose-500" },
                   ].map(t => (
                     <div key={t.label}>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600">{t.label}</span>
+                        <div>
+                          <span className="text-sm font-medium">{t.label}</span>
+                          <span className="text-xs text-slate-400 ml-2">{t.desc}</span>
+                        </div>
                         <span className="text-sm font-medium">{t.value.toFixed(0)}</span>
                       </div>
-                      <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div className={`h-full ${t.color} rounded-full`} style={{ width: `${t.value}%` }} />
+                      <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-1">
+                        <div className={`h-full ${t.color} rounded-full transition-all`} style={{ width: `${t.value}%` }} />
                       </div>
                     </div>
                   ))}

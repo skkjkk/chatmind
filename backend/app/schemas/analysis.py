@@ -46,6 +46,17 @@ class PersonalityResponse(BaseModel):
     their_positive_score: float
     my_direct_score: float
     their_direct_score: float
+    # Big Five
+    my_openness: Optional[float] = 50.0
+    their_openness: Optional[float] = 50.0
+    my_conscientiousness: Optional[float] = 50.0
+    their_conscientiousness: Optional[float] = 50.0
+    my_extraversion: Optional[float] = 50.0
+    their_extraversion: Optional[float] = 50.0
+    my_agreeableness: Optional[float] = 50.0
+    their_agreeableness: Optional[float] = 50.0
+    my_neuroticism: Optional[float] = 50.0
+    their_neuroticism: Optional[float] = 50.0
     my_interaction_style: str
     their_interaction_style: str
     summary: str
