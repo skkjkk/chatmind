@@ -317,13 +317,12 @@ class PersonalityAnalyzer:
 
     @staticmethod
     def _get_interaction_style(messages: List[Message], all_msgs: List[Message]) -> str:
-        """Classify interaction style"""
+        """Classify interaction style with more granular categories"""
         if not messages:
             return "未知"
 
         text = " ".join(m.content or "" for m in messages)
 
-        # Metrics
         q_ratio = sum(1 for m in messages if "？" in (m.content or "") or "?" in (m.content or "")) / len(messages)
         avg_len = sum(len(m.content or "") for m in messages) / len(messages)
         long_msg_ratio = sum(1 for m in messages if len(m.content or "") > 50) / len(messages)
@@ -331,24 +330,42 @@ class PersonalityAnalyzer:
         emoji_ratio = sum(1 for m in messages if m.message_type == "emoji") / len(messages)
         image_ratio = sum(1 for m in messages if m.message_type == "image") / len(messages)
         intimate_count = sum(1 for word in PersonalityAnalyzer.INTIMATE_WORDS if word in text)
+        rational_count = sum(text.count(w) for w in PersonalityAnalyzer.RATIONAL_WORDS)
+        neg_count = sum(text.count(w) for w in PersonalityAnalyzer.NEGATIVE_WORDS)
+        short_ratio = sum(1 for m in messages if 1 <= len(m.content or "") <= 5) / len(messages)
 
-        # Classification
         if intimate_count > 10:
-            return "粘人精"
-        if q_ratio > 0.35:
-            return "好奇宝宝"
-        if emoji_ratio > 0.3:
-            return "表情包达人"
-        if image_ratio > 0.15:
-            return "随手拍"
-        if long_msg_ratio > 0.3:
-            return "话唠"
-        if avg_len < 10 and exclam_ratio < 0.1:
-            return "高冷简洁"
-        if exclam_ratio > 0.3:
-            return "情绪外放"
+            return "黏人撒娇型"
+        if q_ratio > 0.4:
+            return "刨根问底型"
+        if q_ratio > 0.25 and avg_len > 30:
+            return "深度探讨型"
+        if emoji_ratio > 0.4:
+            return "表情包狂魔"
+        if emoji_ratio > 0.2 and exclam_ratio > 0.2:
+            return "活泼可爱型"
+        if image_ratio > 0.2:
+            return "图片分享控"
+        if long_msg_ratio > 0.4 and rational_count > 10:
+            return "分析输出型"
+        if long_msg_ratio > 0.35:
+            return "絮叨倾诉型"
+        if short_ratio > 0.5 and exclam_ratio < 0.1:
+            return "冷淡简洁型"
+        if short_ratio > 0.4 and exclam_ratio > 0.2:
+            return "简短热情型"
+        if exclam_ratio > 0.35:
+            return "情绪外放型"
+        if neg_count > len(messages) * 0.3:
+            return "情绪宣泄型"
+        if rational_count > 15 and avg_len > 20:
+            return "理性陈述型"
+        if avg_len > 40 and q_ratio > 0.15:
+            return "细心关怀型"
+        if intimate_count > 3 and exclam_ratio > 0.15:
+            return "热情互动型"
 
-        return "有来有回"
+        return "平衡互动型"
 
     # ---- Summary ----
 
@@ -419,32 +436,75 @@ class PersonalityAnalyzer:
 
     @staticmethod
     def _trait_description(extro, rat, pos, direc) -> list:
-        """Generate trait tags"""
+        """Generate detailed trait tags across multiple dimensions"""
         tags = []
-        if extro > 65:
+
+        # 外向性维度（5段）
+        if extro >= 80:
+            tags.append("极度外向")
+        elif extro >= 65:
             tags.append("外向主动")
-        elif extro < 35:
-            tags.append("内向被动")
-        else:
+        elif extro >= 45:
             tags.append("张弛有度")
-        if rat > 65:
-            tags.append("理性派")
-        elif rat < 35:
-            tags.append("感性派")
+        elif extro >= 30:
+            tags.append("内敛低调")
         else:
+            tags.append("高度内向")
+
+        # 理性/感性维度（5段）
+        if rat >= 80:
+            tags.append("高度理性")
+        elif rat >= 65:
+            tags.append("逻辑导向")
+        elif rat >= 45:
             tags.append("情理兼顾")
-        if pos > 65:
-            tags.append("阳光")
-        elif pos < 35:
-            tags.append("偶尔emo")
+        elif rat >= 30:
+            tags.append("感性主导")
         else:
+            tags.append("高度感性")
+
+        # 情绪倾向维度（5段）
+        if pos >= 80:
+            tags.append("极度乐观")
+        elif pos >= 65:
+            tags.append("积极阳光")
+        elif pos >= 45:
             tags.append("情绪稳定")
-        if direc > 65:
-            tags.append("直来直去")
-        elif direc < 35:
-            tags.append("委婉派")
+        elif pos >= 30:
+            tags.append("偶尔低落")
         else:
-            tags.append("委婉得体")
+            tags.append("情绪偏负面")
+
+        # 表达方式维度（5段）
+        if direc >= 80:
+            tags.append("极度直接")
+        elif direc >= 65:
+            tags.append("直来直去")
+        elif direc >= 45:
+            tags.append("表达得体")
+        elif direc >= 30:
+            tags.append("委婉含蓄")
+        else:
+            tags.append("高度迂回")
+
+        # 复合标签（基于多维度组合）
+        if extro >= 65 and pos >= 65:
+            tags.append("社交达人")
+        if rat >= 65 and direc >= 65:
+            tags.append("务实高效")
+        if rat < 35 and pos >= 65:
+            tags.append("浪漫主义")
+        if extro < 35 and rat >= 65:
+            tags.append("深思熟虑")
+        if pos < 35 and rat < 35:
+            tags.append("敏感细腻")
+        if extro >= 65 and direc >= 65:
+            tags.append("强势主导")
+        if extro < 35 and direc < 35:
+            tags.append("温和被动")
+        if abs(rat - 50) < 15 and abs(pos - 50) < 15:
+            tags.append("平衡型人格")
+
         return tags
 
     @staticmethod
