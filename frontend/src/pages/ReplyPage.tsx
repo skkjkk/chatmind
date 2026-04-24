@@ -24,37 +24,43 @@ export function ReplyPage() {
   const [draft, setDraft] = useState('')
   const [context, setContext] = useState('')
   const [smartResult, setSmartResult] = useState<any>(null)
+  const [smartAnalysis, setSmartAnalysis] = useState('')
 
   // Quick question mode
   const [scenario, setScenario] = useState('')
   const [quickResult, setQuickResult] = useState<any>(null)
+  const [quickAnalysis, setQuickAnalysis] = useState('')
 
   // Improve mode
   const [improveDraft, setImproveDraft] = useState('')
   const [improveResult, setImproveResult] = useState<any>(null)
 
-  const handleSmartSubmit = async () => {
+  const handleSmartSubmit = () => {
     setLoading(true)
-    try {
-      const result = await api.suggestReply(draft, context, style)
-      setSmartResult(result)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+    setSmartAnalysis('')
+    setSmartResult(null)
+    api.streamSmartReply(
+      draft, context, style,
+      (text) => setSmartAnalysis(prev => prev + text),
+      (suggestions, improvedReply) => {
+        setSmartResult({ suggestions, improved_reply: improvedReply })
+        setLoading(false)
+      }
+    )
   }
 
-  const handleQuickSubmit = async () => {
+  const handleQuickSubmit = () => {
     setLoading(true)
-    try {
-      const result = await api.quickReply(scenario, style)
-      setQuickResult(result)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+    setQuickAnalysis('')
+    setQuickResult(null)
+    api.streamQuickReply(
+      scenario, style,
+      (text) => setQuickAnalysis(prev => prev + text),
+      (suggestions) => {
+        setQuickResult({ suggestions })
+        setLoading(false)
+      }
+    )
   }
 
   const handleImproveSubmit = async () => {
@@ -157,26 +163,32 @@ export function ReplyPage() {
                 获取建议
               </Button>
 
-              {smartResult && (
+              {(smartAnalysis || smartResult) && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 mt-6">
                   <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
                     <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">语境分析</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{smartResult.context_analysis}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                      {smartAnalysis}{loading && <span className="animate-pulse">▍</span>}
+                    </p>
                   </div>
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium">回复建议</p>
-                    {smartResult.suggestions?.map((s: any, i: number) => (
-                      <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                        <p className="text-sm font-medium">{s.content}</p>
-                        <p className="text-xs text-slate-500 mt-1">{s.reason}</p>
+                  {smartResult && (
+                    <>
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">回复建议</p>
+                        {smartResult.suggestions?.map((s: any, i: number) => (
+                          <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                            <p className="text-sm font-medium">{s.content}</p>
+                            <p className="text-xs text-slate-500 mt-1">{s.reason}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  {smartResult.improved_reply && (
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <p className="text-sm font-medium text-green-700 dark:text-green-300">优化后的回复</p>
-                      <p className="text-sm mt-1">{smartResult.improved_reply}</p>
-                    </div>
+                      {smartResult.improved_reply && (
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                          <p className="text-sm font-medium text-green-700 dark:text-green-300">优化后的回复</p>
+                          <p className="text-sm mt-1">{smartResult.improved_reply}</p>
+                        </div>
+                      )}
+                    </>
                   )}
                 </motion.div>
               )}
@@ -208,21 +220,25 @@ export function ReplyPage() {
                 获取建议
               </Button>
 
-              {quickResult && (
+              {(quickAnalysis || quickResult) && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 mt-6">
                   <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
                     <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">场景分析</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{quickResult.scenario_analysis}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                      {quickAnalysis}{loading && <span className="animate-pulse">▍</span>}
+                    </p>
                   </div>
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium">回复建议</p>
-                    {quickResult.suggestions?.map((s: any, i: number) => (
-                      <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                        <p className="text-sm font-medium">{s.content}</p>
-                        <p className="text-xs text-slate-500 mt-1">{s.reason}</p>
-                      </div>
-                    ))}
-                  </div>
+                  {quickResult && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium">回复建议</p>
+                      {quickResult.suggestions?.map((s: any, i: number) => (
+                        <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                          <p className="text-sm font-medium">{s.content}</p>
+                          <p className="text-xs text-slate-500 mt-1">{s.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </CardContent>

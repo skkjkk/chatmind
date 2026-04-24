@@ -1,11 +1,8 @@
 """Reply suggestion API routes"""
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 
-from app.database import get_db
 from app.models.user import User
-from app.models.chat_record import ChatRecord
 from app.schemas.reply import (
     SmartContextRequest,
     SmartContextResponse,
@@ -20,6 +17,28 @@ from app.services.reply_engine import ReplyEngine
 router = APIRouter(prefix="/api/reply", tags=["Reply"])
 
 reply_engine = ReplyEngine()
+
+
+@router.post("/suggest/stream")
+async def stream_smart_suggestion(
+    request: SmartContextRequest,
+    current_user: User = Depends(get_current_user)
+):
+    return StreamingResponse(
+        reply_engine.stream_smart_reply(request.draft, request.context, request.style),
+        media_type="text/event-stream"
+    )
+
+
+@router.post("/quick/stream")
+async def stream_quick_suggestion(
+    request: QuickQuestionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    return StreamingResponse(
+        reply_engine.stream_quick_reply(request.scenario, request.style),
+        media_type="text/event-stream"
+    )
 
 
 @router.post("/suggest", response_model=SmartContextResponse)

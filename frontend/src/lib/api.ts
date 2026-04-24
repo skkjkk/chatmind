@@ -116,6 +116,62 @@ class ApiClient {
     return res.data
   }
 
+  streamQuickReply(scenario: string, style: string, onAnalysis: (text: string) => void, onDone: (suggestions: any[]) => void) {
+    const token = localStorage.getItem('token')
+    const es = new EventSource(`/api/reply/quick/stream?_=${Date.now()}`)
+    // EventSource doesn't support POST, use fetch instead
+    es.close()
+
+    fetch('/api/reply/quick/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ scenario, style }),
+    }).then(async (res) => {
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = JSON.parse(line.slice(6))
+          if (data.type === 'analysis') onAnalysis(data.text)
+          else if (data.type === 'done') onDone(data.suggestions)
+        }
+      }
+    })
+  }
+
+  streamSmartReply(draft: string, context: string, style: string, onAnalysis: (text: string) => void, onDone: (suggestions: any[], improvedReply: string) => void) {
+    const token = localStorage.getItem('token')
+    fetch('/api/reply/suggest/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ draft, context, style }),
+    }).then(async (res) => {
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = JSON.parse(line.slice(6))
+          if (data.type === 'analysis') onAnalysis(data.text)
+          else if (data.type === 'done') onDone(data.suggestions, data.improved_reply)
+        }
+      }
+    })
+  }
+
   // User
   async changePassword(oldPassword: string, newPassword: string) {
     const res = await this.client.put('/user/password', {

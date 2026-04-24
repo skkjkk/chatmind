@@ -1,6 +1,6 @@
 """Reply engine using DeepSeek API"""
 import json
-from typing import Optional
+from typing import Optional, AsyncGenerator
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from app.config import get_settings
@@ -27,6 +27,67 @@ class ReplyEngine:
             return ""
         result = await self.llm.ainvoke([HumanMessage(content=prompt)])
         return result.content
+
+    async def stream_quick_reply(self, scenario: str, style: str = "concise") -> AsyncGenerator[str, None]:
+        """流式返回快速问答结果：先流式输出分析文字，再一次性返回建议JSON"""
+        style_prompts = {
+            "formal": "正式、商务", "playful": "俏皮、轻松",
+            "concise": "简洁", "warm": "热情", "tactful": "委婉"
+        }
+        if not self.llm:
+            yield f"data: {json.dumps({'type': 'analysis', 'text': '无法分析，请稍后重试'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'suggestions': []}, ensure_ascii=False)}\n\n"
+            return
+
+        # 第一步：流式输出分析文字
+        analysis_prompt = f"用一句话分析这个聊天场景（不超过50字）：{scenario}"
+        analysis_text = ""
+        async for chunk in self.llm.astream([HumanMessage(content=analysis_prompt)]):
+            token = chunk.content
+            analysis_text += token
+            yield f"data: {json.dumps({'type': 'analysis', 'text': token}, ensure_ascii=False)}\n\n"
+
+        # 第二步：生成建议（一次性）
+        suggestion_prompt = f"""场景：{scenario}
+用{style_prompts.get(style, '简洁')}风格给出3个回复建议，返回JSON：
+{{"suggestions": [{{"content": "建议1", "style": "风格", "reason": "原因"}}, {{"content": "建议2", "style": "风格", "reason": "原因"}}, {{"content": "建议3", "style": "风格", "reason": "原因"}}]}}"""
+        try:
+            content = await self._call_llm(suggestion_prompt)
+            result = self._parse_json_response(content)
+            suggestions = result.get("suggestions", []) if result else []
+        except Exception:
+            suggestions = []
+        yield f"data: {json.dumps({'type': 'done', 'suggestions': suggestions}, ensure_ascii=False)}\n\n"
+
+    async def stream_smart_reply(self, draft: str, context: str, style: str = "concise") -> AsyncGenerator[str, None]:
+        """流式返回智能语境结果"""
+        style_prompts = {
+            "formal": "用正式、商务的语气", "playful": "用俏皮、轻松的语气",
+            "concise": "简洁明了", "warm": "热情友好", "tactful": "委婉含蓄"
+        }
+        if not self.llm:
+            yield f"data: {json.dumps({'type': 'analysis', 'text': '无法分析，请稍后重试'}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'suggestions': [], 'improved_reply': draft}, ensure_ascii=False)}\n\n"
+            return
+
+        analysis_prompt = f"用一句话分析这段对话中对方的意图（不超过50字）：{context}"
+        async for chunk in self.llm.astream([HumanMessage(content=analysis_prompt)]):
+            token = chunk.content
+            yield f"data: {json.dumps({'type': 'analysis', 'text': token}, ensure_ascii=False)}\n\n"
+
+        suggestion_prompt = f"""对话背景：{context}
+草稿：{draft}
+用{style_prompts.get(style, '简洁')}方式给出3个建议和优化回复，返回JSON：
+{{"suggestions": [{{"content": "建议1", "style": "风格", "reason": "原因"}}], "improved_reply": "优化后回复"}}"""
+        try:
+            content = await self._call_llm(suggestion_prompt)
+            result = self._parse_json_response(content)
+            suggestions = result.get("suggestions", []) if result else []
+            improved = result.get("improved_reply", draft) if result else draft
+        except Exception:
+            suggestions = []
+            improved = draft
+        yield f"data: {json.dumps({'type': 'done', 'suggestions': suggestions, 'improved_reply': improved}, ensure_ascii=False)}\n\n"
 
     def _parse_json_response(self, content: str) -> Optional[dict]:
         """Parse JSON from LLM response"""
